@@ -141,11 +141,11 @@ main(int argc, char* argv[])
 {
     uint16_t numberOfUes = 1;
     uint16_t numberOfEnbs = 7;
-    Time simTime = Seconds(50);
+    Time simTime = Seconds(100);
     // double distance = 50;
-    Time interval = Seconds(15);
-    double speed = 1.5;
-    bool verbose = true;
+    Time interval = Seconds(50);
+    double speed = 100;
+    bool verbose = false;
     std::string dbFileName = "oran-repository.db";
 
     // Command line arguments
@@ -154,12 +154,21 @@ main(int argc, char* argv[])
     cmd.Parse(argc, argv);
 
     Config::SetDefault("ns3::LteHelper::UseIdealRrc", BooleanValue(false));
+    // Disabled to prevent the automatic cell reselection when signal quality is bad.
+    Config::SetDefault("ns3::LteUePhy::EnableRlfDetection", BooleanValue(true));
+    // transmission power
+    Config::SetDefault("ns3::LteEnbPhy::TxPower", DoubleValue(100));
 
     Ptr<LteHelper> lteHelper = CreateObject<LteHelper>();
     Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper>();
     lteHelper->SetEpcHelper(epcHelper);
+    lteHelper->SetAttribute("PathlossModel", StringValue("ns3::FriisPropagationLossModel"));
+    lteHelper->SetEnbDeviceAttribute("DlBandwidth", UintegerValue(50));
+    lteHelper->SetEnbDeviceAttribute("UlBandwidth", UintegerValue(50));
     lteHelper->SetSchedulerType("ns3::RrFfMacScheduler");
-    lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm"); // disable automatic handover
+    // lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm"); // disable automatic
+    // handover
+    lteHelper->SetHandoverAlgorithmType("ns3::A3RsrpHandoverAlgorithm");
 
     Ptr<Node> pgw = epcHelper->GetPgwNode();
 
@@ -190,7 +199,7 @@ main(int argc, char* argv[])
     positionAlloc->Add(Vector(8000, 6160, 0));
     positionAlloc->Add(Vector(2662, 5160, 0));
     positionAlloc->Add(Vector(4662, 5160, 0));
-    positionAlloc->Add(Vector(4662, 5160, 0));
+    positionAlloc->Add(Vector(6662, 5160, 0));
 
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -198,7 +207,7 @@ main(int argc, char* argv[])
     mobility.Install(enbNodes);
 
     Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator>();
-    uePositionAlloc->Add(Vector(0, 5500, 0));
+    uePositionAlloc->Add(Vector(900, 5500, 0));
 
     mobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
     mobility.SetPositionAllocator(uePositionAlloc);
@@ -212,7 +221,7 @@ main(int argc, char* argv[])
     }
 
     // Schedule the first direction switch
-    Simulator::Schedule(interval, &ReverseVelocity, ueNodes, interval);
+    // Simulator::Schedule(interval, &ReverseVelocity, ueNodes, interval);
 
     // Install LTE Devices in eNB and UEs
     NetDeviceContainer enbLteDevs = lteHelper->InstallEnbDevice(enbNodes);
