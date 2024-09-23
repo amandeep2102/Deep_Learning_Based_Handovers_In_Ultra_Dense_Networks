@@ -139,12 +139,12 @@ QueryRcSink(std::string query, std::string args, int rc)
 int
 main(int argc, char* argv[])
 {
-    uint16_t numberOfUes = 1;
+    uint16_t numberOfUes = 5;
     uint16_t numberOfEnbs = 7;
     Time simTime = Seconds(100);
     // double distance = 50;
     Time interval = Seconds(50);
-    double speed = 100;
+    double speed[5]={100,50,80,120,20};
     bool verbose = false;
     std::string dbFileName = "oran-repository.db";
 
@@ -208,6 +208,10 @@ main(int argc, char* argv[])
 
     Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator>();
     uePositionAlloc->Add(Vector(900, 5500, 0));
+    uePositionAlloc->Add(Vector(2200,4500,0));
+    uePositionAlloc->Add(Vector(3000,6000,0));
+    uePositionAlloc->Add(Vector(4400,5300,0));
+    uePositionAlloc->Add(Vector(6000,6500,0));
 
     mobility.SetMobilityModel("ns3::ConstantVelocityMobilityModel");
     mobility.SetPositionAllocator(uePositionAlloc);
@@ -217,7 +221,7 @@ main(int argc, char* argv[])
     {
         Ptr<ConstantVelocityMobilityModel> mobility =
             ueNodes.Get(idx)->GetObject<ConstantVelocityMobilityModel>();
-        mobility->SetVelocity(Vector(speed, 0, 0));
+        mobility->SetVelocity(Vector(speed[idx], 0, 0));
     }
 
     // Schedule the first direction switch
