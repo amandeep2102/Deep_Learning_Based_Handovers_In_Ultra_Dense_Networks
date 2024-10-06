@@ -34,7 +34,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ScratchSimulator");
+NS_LOG_COMPONENT_DEFINE("OranLte2LteDeepLearningDistanceHandover");
 
 void
 PrintGnuplottableUeListToFile(std::string filename)
@@ -153,6 +153,13 @@ main(int argc, char* argv[])
     cmd.AddValue("verbose", "Enable printing SQL queries results", verbose);
     cmd.Parse(argc, argv);
 
+    // LogComponentEnable("LteHelper", LOG_LEVEL_INFO);
+    // LogComponentEnable("LteEnbRrc", LOG_LEVEL_INFO);
+    LogComponentEnable("LteUeRrc", LOG_LEVEL_INFO); 
+
+
+    // Models the transmission of RRC messages from the UE to the eNB in a real fashion, by creating real RRC PDUs and
+    // transmitting them over Signaling Radio Bearers using radio resources allocated by the LTE MAC scheduler
     Config::SetDefault("ns3::LteHelper::UseIdealRrc", BooleanValue(false));
     // Disabled to prevent the automatic cell reselection when signal quality is bad.
     Config::SetDefault("ns3::LteUePhy::EnableRlfDetection", BooleanValue(true));
@@ -166,8 +173,9 @@ main(int argc, char* argv[])
     lteHelper->SetEnbDeviceAttribute("DlBandwidth", UintegerValue(50));
     lteHelper->SetEnbDeviceAttribute("UlBandwidth", UintegerValue(50));
     lteHelper->SetSchedulerType("ns3::RrFfMacScheduler");
-    // lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm"); // disable automatic
-    // handover
+    // disable automatic handover
+    // lteHelper->SetHandoverAlgorithmType("ns3::NoOpHandoverAlgorithm"); 
+    // Implementation of the strongest cell handover algorithm, based on RSRP measurements and Event A3
     lteHelper->SetHandoverAlgorithmType("ns3::A3RsrpHandoverAlgorithm");
 
     Ptr<Node> pgw = epcHelper->GetPgwNode();
@@ -178,20 +186,6 @@ main(int argc, char* argv[])
     ueNodes.Create(numberOfUes);
 
     // Install Mobility Model
-    // Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-    // for (uint16_t i = 0; i < numberOfEnbs; i++)
-    // {
-    //     positionAlloc->Add(Vector(distance * i, 0, 20));
-    // }
-
-    // for (uint16_t i = 0; i < numberOfUes; i++)
-    // {
-    //     // Coordinates of the middle point between the eNBs, minus the distance covered
-    //     // in half of the interval for switching directions
-    //     positionAlloc->Add(Vector((distance / 2) - (speed * (interval.GetSeconds() / 2)),
-    //     0, 1.5));
-    // }
-
     Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
     positionAlloc->Add(Vector(2000, 6160, 0));
     positionAlloc->Add(Vector(4000, 6160, 0));
@@ -199,7 +193,7 @@ main(int argc, char* argv[])
     positionAlloc->Add(Vector(8000, 6160, 0));
     positionAlloc->Add(Vector(2662, 5160, 0));
     positionAlloc->Add(Vector(4662, 5160, 0));
-    positionAlloc->Add(Vector(6662, 5160, 0));
+    positionAlloc->Add(Vector(6702, 5160, 0));
 
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -236,11 +230,8 @@ main(int argc, char* argv[])
     Ipv4InterfaceContainer ueIpIfaces;
     ueIpIfaces = epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueLteDevs));
 
-    // Attach all UEs to the first eNodeB
-    for (uint16_t i = 0; i < numberOfUes; i++)
-    {
-        lteHelper->Attach(ueLteDevs.Get(i), enbLteDevs.Get(0));
-    }
+    // Attach all UEs to the closest eNodeB
+    lteHelper->Attach(ueLteDevs);
 
     // Add X2 interface
     lteHelper->AddX2Interface(enbNodes);
@@ -331,12 +322,12 @@ main(int argc, char* argv[])
     Simulator::Schedule(Seconds(2),
                         &OranHelper::ActivateE2NodeTerminators,
                         oranHelper,
-                        e2NodeTerminatorsUes);
+                        e2NodeTerminatorsUes);      
     // ORAN Models -- END
 
     // Trace the end of handovers
-    Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
-                    MakeCallback(&NotifyHandoverEndOkEnb));
+    // Config::Connect("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
+    //                 MakeCallback(&NotifyHandoverEndOkEnb));
 
     Simulator::Stop(simTime);
     Simulator::Run();
