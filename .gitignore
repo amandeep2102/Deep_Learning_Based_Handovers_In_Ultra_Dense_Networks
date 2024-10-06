@@ -3,4 +3,4 @@ nested-subdir/
 subdir/
 
 
-.CMakeLists.txt
+CMakeLists.txt
